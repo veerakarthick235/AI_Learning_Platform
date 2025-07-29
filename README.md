@@ -22,6 +22,6 @@ An AI-powered personalized learning platform for students and professionals to l
 
 ## 💻 Frontend Setup
 
-  cd frontend
-  npm install
+  cd frontend|
+  npm install|
   npm start
