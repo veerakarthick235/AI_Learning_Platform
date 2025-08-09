@@ -6,24 +6,20 @@ import Header from "../../components/header/header";
 import Loader from "../../components/loader/loader";
 import Modal from "../../components/modal/modal";
 import {
-  CirclePlus,
-  ChevronDown,
   ChevronRight,
-  LoaderPinwheel,
   FolderSearch,
   Bot,
 } from "lucide-react";
-import { translateLocalStorage, translateObj } from "../../translate/translate";
 import Markdown from "react-markdown";
 import ConfettiExplosion from "react-confetti-explosion";
 
-const RoadmapPage = (props) => {
+const RoadmapPage = () => {
   const [resources, setResources] = useState(null);
   const [resourceParam, setResourceParam] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
-  const [roadmap, setRoadmap] = useState({});
+  const [roadmap, setRoadmap] = useState(null); 
   const [topicDetails, setTopicDetails] = useState({
     time: "-",
     knowledge_level: "-",
@@ -32,36 +28,26 @@ const RoadmapPage = (props) => {
   const [confettiExplode, setConfettiExplode] = useState(false);
   const navigate = useNavigate();
   const topic = searchParams.get("topic");
-  if (!topic) {
-    navigate("/");
-  }
+
   useEffect(() => {
+    if (!topic) {
+      navigate("/");
+      return; 
+    }
+
     const topics = JSON.parse(localStorage.getItem("topics")) || {};
+    const roadmaps = JSON.parse(localStorage.getItem("roadmaps")) || {};
+    const stats = JSON.parse(localStorage.getItem("quizStats")) || {};
+
+    if (!roadmaps[topic] || !topics[topic]) {
+      navigate("/");
+      return;
+    }
 
     setTopicDetails(topics[topic]);
-
-    const roadmaps = JSON.parse(localStorage.getItem("roadmaps")) || {};
-    setRoadmap(roadmaps[topic]);
-    // setLoading(true);
-    // translateObj(roadmaps[topic], "hi").then((translatedObj) => {
-    // setRoadmap(translatedObj);
-    // setLoading(false);
-    //   console.log(translatedObj);
-    // });
-
-    const stats = JSON.parse(localStorage.getItem("quizStats")) || {};
+    setRoadmap(roadmaps[topic] || {}); 
     setQuizStats(stats[topic] || {});
-
-    if (
-      !Object.keys(roadmaps).includes(topic) ||
-      !Object.keys(topics).includes(topic)
-    ) {
-      //   alert(`Roadmap for ${topic} not found. Please generate it first.`);
-      navigate("/");
-    }
-    console.log(roadmap);
-    console.log(topicDetails);
-  }, [topic]);
+  }, [topic, navigate]);
 
   const colors = [
     "#D14EC4",
@@ -75,8 +61,7 @@ const RoadmapPage = (props) => {
 
   const Subtopic = ({ subtopic, number, style, weekNum, quizStats }) => {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    const topic = searchParams.get("topic");
+
     return (
       <div
         className="flexbox subtopic"
@@ -84,12 +69,7 @@ const RoadmapPage = (props) => {
       >
         <h1 className="number">{number}</h1>
         <div className="detail">
-          <h3
-            style={{
-              fontWeight: "600",
-              textTransform: "capitalize",
-            }}
-          >
+          <h3 style={{ fontWeight: "600", textTransform: "capitalize" }}>
             {subtopic.subtopic}
           </h3>
           <p className="time">
@@ -97,22 +77,24 @@ const RoadmapPage = (props) => {
               parseFloat(subtopic.time.replace(/^\D+/g, "")) *
               (parseFloat(localStorage.getItem("hardnessIndex")) || 1)
             ).toFixed(1)}{" "}
-            {subtopic.time.replace(/[0-9]/g, "")}
+            {subtopic.time.replace(/[0-9.]/g, "").trim()}
           </p>
           <p style={{ fontWeight: "300", opacity: "61%", marginTop: "1em" }}>
             {subtopic.description}
           </p>
         </div>
+
         <div
           className="hardness"
           onClick={() => {
             let hardness = prompt(
               "Rate Hardness on a rating of 1-10 (where 5 means perfect)"
             );
-            if (hardness) {
+            if (hardness && !isNaN(hardness)) {
               let hardnessIndex =
                 parseFloat(localStorage.getItem("hardnessIndex")) || 1;
-              hardnessIndex = hardnessIndex + (hardness - 5) / 10;
+              hardnessIndex =
+                hardnessIndex + (parseFloat(hardness) - 5) / 10;
               localStorage.setItem("hardnessIndex", hardnessIndex);
               window.location.reload();
             }
@@ -137,9 +119,12 @@ const RoadmapPage = (props) => {
           >
             Resources
           </button>
+
           {quizStats.timeTaken ? (
             <div className="quiz_completed">
-              {((quizStats.numCorrect * 100) / quizStats.numQues).toFixed(1) +
+              {((quizStats.numCorrect * 100) / quizStats.numQues).toFixed(
+                1
+              ) +
                 "% Correct in " +
                 (quizStats.timeTaken / 1000).toFixed(0) +
                 "s"}
@@ -161,19 +146,11 @@ const RoadmapPage = (props) => {
     );
   };
 
-  const TopicBar = ({
-    week,
-    topic,
-    color,
-    subtopics,
-    style,
-    children,
-    weekNum,
-    quizStats,
-  }) => {
+  const TopicBar = ({ week, topic, color, subtopics, weekNum, quizStats }) => {
     const [open, setOpen] = useState(false);
+
     return (
-      <div style={style}>
+      <div>
         <div className="topic-bar" style={{ "--clr": color }}>
           <div className="topic-bar-title">
             <h3
@@ -195,36 +172,30 @@ const RoadmapPage = (props) => {
           <button
             className="plus"
             style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
-            onClick={() => {
-              setOpen(!open);
-            }}
+            onClick={() => setOpen(!open)}
           >
-            <ChevronRight
-              size={50}
-              strokeWidth={2}
-              color={color}
-            ></ChevronRight>
+            <ChevronRight size={50} strokeWidth={2} color={color} />
           </button>
           <div
             className="subtopics"
             style={{ display: open ? "block" : "none" }}
           >
-            {subtopics?.map((subtopic, i) => (
+            {subtopics?.map((subtopicItem, i) => (
               <Subtopic
-                subtopic={subtopic}
+                key={i}
+                subtopic={subtopicItem}
                 number={i + 1}
                 weekNum={weekNum}
                 quizStats={quizStats[i + 1] || {}}
-              ></Subtopic>
+              />
             ))}
           </div>
         </div>
-
-        {children}
       </div>
     );
   };
-  const ResourcesSection = ({ children }) => {
+
+  const ResourcesSection = () => {
     return (
       <div className="flexbox resources">
         <div className="generativeFill">
@@ -233,54 +204,61 @@ const RoadmapPage = (props) => {
             onClick={() => {
               setLoading(true);
               axios.defaults.baseURL = "http://localhost:5000";
-
               axios({
                 method: "POST",
                 url: "/api/generate-resource",
                 data: resourceParam,
-                withCredentials: false,
-                headers: {
-                  "Access-Control-Allow-Origin": "*",
-                },
               })
                 .then((res) => {
                   setLoading(false);
                   setResources(
                     <div className="res">
-                      <h2 className="res-heading">{resourceParam.subtopic}</h2>
+                      <h2 className="res-heading">
+                        {resourceParam.subtopic}
+                      </h2>
                       <Markdown>{res.data}</Markdown>
                     </div>
                   );
-                  setTimeout(() => {
-                    setConfettiExplode(true);
-                    console.log("exploding confetti...");
-                  }, 500);
+                  setTimeout(() => setConfettiExplode(true), 500);
                 })
                 .catch((err) => {
                   setLoading(false);
-                  alert("error generating resources");
-                  navigate("/roadmap?topic=" + encodeURI(topic));
+                  console.error("Error generating resource:", err);
+                  alert("Error generating resources. Please try again.");
                 });
             }}
           >
-            <Bot size={70} strokeWidth={1} className="icon"></Bot> AI Generated
+            <Bot size={70} strokeWidth={1} className="icon" /> AI Generated
             Resources
           </button>
         </div>
-        {/* OR */}
+
         <div className="databaseFill">
-          <button className="primary" id="searchWidgetTrigger">
-            <FolderSearch
-              size={70}
-              strokeWidth={1}
-              className="icon"
-            ></FolderSearch>
-            Browse Online Courses
+          {/* MODIFIED: This button now searches directly on Coursera */}
+          <button
+            className="primary"
+            onClick={() => {
+              const query = encodeURIComponent(
+                resourceParam.subtopic || topic
+              );
+              window.open(
+                `https://www.coursera.org/search?query=${query}`,
+                "_blank"
+              );
+            }}
+          >
+            <FolderSearch size={70} strokeWidth={1} className="icon" /> Browse
+            Online Resources
           </button>
         </div>
       </div>
     );
   };
+
+  if (!roadmap) {
+    return <Loader>Loading Roadmap...</Loader>;
+  }
+
   return (
     <div className="roadmap_wrapper">
       <Modal
@@ -288,25 +266,30 @@ const RoadmapPage = (props) => {
         onClose={() => {
           setModalOpen(false);
           setResources(null);
+          setConfettiExplode(false); 
         }}
       >
         {!resources ? (
-          <ResourcesSection></ResourcesSection>
+          <ResourcesSection />
         ) : (
           <>
             {confettiExplode && (
-              <ConfettiExplosion zIndex={10000} style={{ margin: "auto" }} />
+              <ConfettiExplosion
+                zIndex={10000}
+                style={{ position: "absolute", top: "50%", left: "50%" }}
+              />
             )}
-
             {resources}
           </>
         )}
       </Modal>
-      <Header></Header>
+
+      <Header />
 
       <Loader style={{ display: loading ? "block" : "none" }}>
         Generating Resource...
       </Loader>
+
       <div className="content">
         <div className="flexbox topic">
           <h1 style={{ display: "inline-block", marginRight: "2ch" }}>
@@ -316,23 +299,28 @@ const RoadmapPage = (props) => {
             {topicDetails.time}
           </h2>
         </div>
+
         <div className="roadmap">
-          {Object.keys(roadmap)
-            .sort(
-              (a, b) => parseInt(a.split(" ")[1]) - parseInt(b.split(" ")[1])
-            )
-            .map((week, i) => {
-              return (
+          {Object.keys(roadmap).length > 0 ? (
+            Object.keys(roadmap)
+              .sort(
+                (a, b) =>
+                  parseInt(a.split(" ")[1]) - parseInt(b.split(" ")[1])
+              )
+              .map((week, i) => (
                 <TopicBar
+                  key={i}
                   weekNum={i + 1}
                   week={week}
                   topic={roadmap[week].topic}
                   subtopics={roadmap[week].subtopics}
                   color={colors[i % colors.length]}
                   quizStats={quizStats[i + 1] || {}}
-                ></TopicBar>
-              );
-            })}
+                />
+              ))
+          ) : (
+            <p>No roadmap data found for this topic.</p>
+          )}
         </div>
       </div>
     </div>
