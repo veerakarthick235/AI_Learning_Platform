@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
 import "./roadmap.css";
 import Header from "../../components/header/header";
 import Loader from "../../components/loader/loader";
@@ -9,9 +8,12 @@ import {
   ChevronRight,
   FolderSearch,
   Bot,
+  Award,
 } from "lucide-react";
 import Markdown from "react-markdown";
 import ConfettiExplosion from "react-confetti-explosion";
+// MODIFIED: Import your new API function
+import { generateResource } from "../../services/api";
 
 const RoadmapPage = () => {
   const [resources, setResources] = useState(null);
@@ -50,183 +52,174 @@ const RoadmapPage = () => {
   }, [topic, navigate]);
 
   const colors = [
-    "#D14EC4",
-    "#4ED1B1",
-    "#D14E4E",
-    "#4EAAD1",
-    "#D1854E",
-    "#904ED1",
-    "#AFD14E",
+    "#D14EC4", "#4ED1B1", "#D14E4E", "#4EAAD1",
+    "#D1854E", "#904ED1", "#AFD14E",
   ];
 
   const Subtopic = ({ subtopic, number, style, weekNum, quizStats }) => {
-    const navigate = useNavigate();
-
+    // ... (This component remains the same)
     return (
-      <div
-        className="flexbox subtopic"
-        style={{ ...style, justifyContent: "space-between" }}
-      >
-        <h1 className="number">{number}</h1>
-        <div className="detail">
-          <h3 style={{ fontWeight: "600", textTransform: "capitalize" }}>
-            {subtopic.subtopic}
-          </h3>
-          <p className="time">
-            {(
-              parseFloat(subtopic.time.replace(/^\D+/g, "")) *
-              (parseFloat(localStorage.getItem("hardnessIndex")) || 1)
-            ).toFixed(1)}{" "}
-            {subtopic.time.replace(/[0-9.]/g, "").trim()}
-          </p>
-          <p style={{ fontWeight: "300", opacity: "61%", marginTop: "1em" }}>
-            {subtopic.description}
-          </p>
-        </div>
-
         <div
-          className="hardness"
-          onClick={() => {
-            let hardness = prompt(
-              "Rate Hardness on a rating of 1-10 (where 5 means perfect)"
-            );
-            if (hardness && !isNaN(hardness)) {
-              let hardnessIndex =
-                parseFloat(localStorage.getItem("hardnessIndex")) || 1;
-              hardnessIndex =
-                hardnessIndex + (parseFloat(hardness) - 5) / 10;
-              localStorage.setItem("hardnessIndex", hardnessIndex);
-              window.location.reload();
-            }
-          }}
+          className="flexbox subtopic"
+          style={{ ...style, justifyContent: "space-between" }}
         >
-          Rate Hardness
-        </div>
-
-        <div className="flexbox buttons" style={{ flexDirection: "column" }}>
-          <button
-            className="resourcesButton"
+          <h1 className="number">{number}</h1>
+          <div className="detail">
+            <h3 style={{ fontWeight: "600", textTransform: "capitalize" }}>
+              {subtopic.subtopic}
+            </h3>
+            <p className="time">
+              {(
+                parseFloat(subtopic.time.replace(/^\D+/g, "")) *
+                (parseFloat(localStorage.getItem("hardnessIndex")) || 1)
+              ).toFixed(1)}{" "}
+              {subtopic.time.replace(/[0-9.]/g, "").trim()}
+            </p>
+            <p style={{ fontWeight: "300", opacity: "61%", marginTop: "1em" }}>
+              {subtopic.description}
+            </p>
+          </div>
+  
+          <div
+            className="hardness"
             onClick={() => {
-              setModalOpen(true);
-              setResourceParam({
-                subtopic: subtopic.subtopic,
-                description: subtopic.description,
-                time: subtopic.time,
-                course: topic,
-                knowledge_level: topicDetails.knowledge_level,
-              });
+              let hardness = prompt(
+                "Rate Hardness on a rating of 1-10 (where 5 means perfect)"
+              );
+              if (hardness && !isNaN(hardness)) {
+                let hardnessIndex =
+                  parseFloat(localStorage.getItem("hardnessIndex")) || 1;
+                hardnessIndex =
+                  hardnessIndex + (parseFloat(hardness) - 5) / 10;
+                localStorage.setItem("hardnessIndex", hardnessIndex);
+                window.location.reload();
+              }
             }}
           >
-            Resources
-          </button>
-
-          {quizStats.timeTaken ? (
-            <div className="quiz_completed">
-              {((quizStats.numCorrect * 100) / quizStats.numQues).toFixed(
-                1
-              ) +
-                "% Correct in " +
-                (quizStats.timeTaken / 1000).toFixed(0) +
-                "s"}
-            </div>
-          ) : (
+            Rate Hardness
+          </div>
+  
+          <div className="flexbox buttons" style={{ flexDirection: "column" }}>
             <button
-              className="quizButton"
+              className="resourcesButton"
               onClick={() => {
-                navigate(
-                  `/quiz?topic=${topic}&week=${weekNum}&subtopic=${number}`
-                );
+                setModalOpen(true);
+                setResourceParam({
+                  subtopic: subtopic.subtopic,
+                  description: subtopic.description,
+                  time: subtopic.time,
+                  course: topic,
+                  knowledge_level: topicDetails.knowledge_level,
+                });
               }}
             >
-              Start Quiz
+              Resources
             </button>
-          )}
+  
+            {quizStats.timeTaken ? (
+              <div className="quiz_completed">
+                {((quizStats.numCorrect * 100) / quizStats.numQues).toFixed(
+                  1
+                ) +
+                  "% Correct in " +
+                  (quizStats.timeTaken / 1000).toFixed(0) +
+                  "s"}
+              </div>
+            ) : (
+              <button
+                className="quizButton"
+                onClick={() => {
+                  navigate(
+                    `/quiz?topic=${topic}&week=${weekNum}&subtopic=${number}`
+                  );
+                }}
+              >
+                Start Quiz
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    );
+      );
   };
 
   const TopicBar = ({ week, topic, color, subtopics, weekNum, quizStats }) => {
+    // ... (This component remains the same)
     const [open, setOpen] = useState(false);
-
     return (
-      <div>
-        <div className="topic-bar" style={{ "--clr": color }}>
-          <div className="topic-bar-title">
-            <h3
-              className="week"
-              style={{ fontWeight: "400", textTransform: "capitalize" }}
+        <div>
+          <div className="topic-bar" style={{ "--clr": color }}>
+            <div className="topic-bar-title">
+              <h3
+                className="week"
+                style={{ fontWeight: "400", textTransform: "capitalize" }}
+              >
+                {week}
+              </h3>
+              <h2
+                style={{
+                  fontWeight: "400",
+                  textTransform: "capitalize",
+                  color: "white",
+                }}
+              >
+                {topic}
+              </h2>
+            </div>
+            <button
+              className="plus"
+              style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+              onClick={() => setOpen(!open)}
             >
-              {week}
-            </h3>
-            <h2
-              style={{
-                fontWeight: "400",
-                textTransform: "capitalize",
-                color: "white",
-              }}
+              <ChevronRight size={50} strokeWidth={2} color={color} />
+            </button>
+            <div
+              className="subtopics"
+              style={{ display: open ? "block" : "none" }}
             >
-              {topic}
-            </h2>
-          </div>
-          <button
-            className="plus"
-            style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
-            onClick={() => setOpen(!open)}
-          >
-            <ChevronRight size={50} strokeWidth={2} color={color} />
-          </button>
-          <div
-            className="subtopics"
-            style={{ display: open ? "block" : "none" }}
-          >
-            {subtopics?.map((subtopicItem, i) => (
-              <Subtopic
-                key={i}
-                subtopic={subtopicItem}
-                number={i + 1}
-                weekNum={weekNum}
-                quizStats={quizStats[i + 1] || {}}
-              />
-            ))}
+              {subtopics?.map((subtopicItem, i) => (
+                <Subtopic
+                  key={i}
+                  subtopic={subtopicItem}
+                  number={i + 1}
+                  weekNum={weekNum}
+                  quizStats={quizStats[i + 1] || {}}
+                />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
   };
 
   const ResourcesSection = () => {
+    // ======================= MODIFIED SECTION START =======================
+    const handleGenerateResource = async () => {
+      setLoading(true);
+      try {
+        const resData = await generateResource(resourceParam);
+        setResources(
+          <div className="res">
+            <h2 className="res-heading">{resourceParam.subtopic}</h2>
+            {/* The backend should return a field, e.g., resData.resources */}
+            <Markdown>{resData.resources}</Markdown>
+          </div>
+        );
+        setTimeout(() => setConfettiExplode(true), 500);
+      } catch (err) {
+        console.error("Error generating resource:", err);
+        alert(err.message || "Error generating resources. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    // ======================== MODIFIED SECTION END ========================
+
     return (
       <div className="flexbox resources">
         <div className="generativeFill">
           <button
             className="primary"
-            onClick={() => {
-              setLoading(true);
-              axios.defaults.baseURL = "http://localhost:5000";
-              axios({
-                method: "POST",
-                url: "/api/generate-resource",
-                data: resourceParam,
-              })
-                .then((res) => {
-                  setLoading(false);
-                  setResources(
-                    <div className="res">
-                      <h2 className="res-heading">
-                        {resourceParam.subtopic}
-                      </h2>
-                      <Markdown>{res.data}</Markdown>
-                    </div>
-                  );
-                  setTimeout(() => setConfettiExplode(true), 500);
-                })
-                .catch((err) => {
-                  setLoading(false);
-                  console.error("Error generating resource:", err);
-                  alert("Error generating resources. Please try again.");
-                });
-            }}
+            onClick={handleGenerateResource} // MODIFIED: Call the new async function
           >
             <Bot size={70} strokeWidth={1} className="icon" /> AI Generated
             Resources
@@ -234,7 +227,6 @@ const RoadmapPage = () => {
         </div>
 
         <div className="databaseFill">
-          {/* MODIFIED: This button now searches directly on Coursera */}
           <button
             className="primary"
             onClick={() => {
@@ -249,6 +241,18 @@ const RoadmapPage = () => {
           >
             <FolderSearch size={70} strokeWidth={1} className="icon" /> Browse
             Online Resources
+          </button>
+        </div>
+
+        <div className="databaseFill">
+          <button
+            className="primary"
+            onClick={() => {
+              window.open("https://www.life-global.org/", "_blank");
+            }}
+          >
+            <Award size={70} strokeWidth={1} className="icon" />
+            Certification Course
           </button>
         </div>
       </div>
@@ -326,5 +330,7 @@ const RoadmapPage = () => {
     </div>
   );
 };
+
+
 
 export default RoadmapPage;
