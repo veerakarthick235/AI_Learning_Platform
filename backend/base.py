@@ -27,7 +27,7 @@ api.config['SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "a_default_fallback_secre
 
 # Configure CORS to allow requests from your frontend
 # The allowed origins are loaded from the .env file
-cors_origins = os.getenv("CORS_ORIGINS", "https://ai-learning-portal.netlify.app/").split(',')
+cors_origins = os.getenv("CORS_ORIGINS", "https://ai-learning-portal.netlify.app").split(',')
 CORS(api, origins=cors_origins)
 
 # MySQL Configuration using Environment Variables
