@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 // Get the backend URL from the environment variable
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = process.env.REACT_APP_API_URL || "https://ai-learning-platform-8ly2.onrender.com";
 
 // Create a configured instance of axios
 const apiClient = axios.create({
@@ -45,4 +45,5 @@ export const generateResource = async (params) => {
 export const loginUser = async (credentials) => {
   const response = await apiClient.post('/login', credentials);
   return response.data;
+
 };
